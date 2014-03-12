@@ -1,10 +1,11 @@
 class DetectLocaleController < ActionController::Base
+  layout false
   include LocalesHelper
   include CurrentUserHelper
 
   def show
-    d = detected_locale(Translation.frontpage_locales)
-    if d.present? and (current_locale != d)
+    d = best_locale(detected_locale(Translation.frontpage_locales))
+    if current_locale != d
       I18n.locale = d
       Measurement.increment('detect_locale.foreign')
     else
@@ -13,42 +14,17 @@ class DetectLocaleController < ActionController::Base
     end
   end
 
-  def video_show
-    lang = detected_locale(Translation.video_locales)
+  def video
+    locale = best_locale(detected_locale(Translation.video_locales))
 
-    if lang.present? && lang != :en
-      Measurement.increment('detect_video_locale.foreign')
-
-      render text: lang
-    else
+    if locale == :en
       Measurement.increment('detect_video_locale.default')
-
       head :ok
+    else
+      Measurement.increment('detect_video_locale.foreign')
+      render text: locale
     end
   end
-
-#### JS for Crowdtilt
-  # $(function() {
-  #   return $.ajax({
-  #     url: "http://127.0.0.1:3000/detect_video_locale",
-  #     dataType: 'text/html',
-  #     success: function(data) {
-  #       var modififier = '&cc_load_policy=1&cc_lang_pref=' + data;
-
-  #       console.log(data);
-  #       alert(data);
-  #       alert(modififier);
-
-  #       // var param_tag = document.getElementsByName('movie')[0];
-  #       // param_tag.value = param_tag.value + modififier;
-
-  #       // var embed_tag = document.getElementsByTagName('embed')[0];
-  #       // embed_tag.src = embed_tag.src + modififier;
-  #     }
-  #   });
-  # });
-
-
 
   private
   def current_locale
